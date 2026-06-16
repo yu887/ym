@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: library-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-library_system}
+      MYSQL_USER: ${DB_USER:-library_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-library_pass_2024}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - library-network
+
+  app:
+    build: .
+    container_name: library-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-library_user}
+      DB_PASSWORD: ${DB_PASSWORD:-library_pass_2024}
+      DB_NAME: ${DB_NAME:-library_system}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - library-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  library-network:
+    driver: bridge
