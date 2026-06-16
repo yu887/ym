@@ -1010,20 +1010,28 @@ def update_user_admin(user_id):
 # 生产模式：托管前端静态文件
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve_frontend(path):
-    # API 路径不处理
-    if path.startswith('api/'):
-        return jsonify({'message': 'Not Found'}), 404
-    # 尝试匹配静态文件
-    if path and os.path.isfile(os.path.join(STATIC_DIR, path)):
-        return send_from_directory(STATIC_DIR, path)
-    # SPA fallback：返回 index.html
+@app.route('/')
+def serve_index():
+    """根路径返回前端首页"""
     index_path = os.path.join(STATIC_DIR, 'index.html')
     if os.path.isfile(index_path):
         return send_file(index_path)
-    return jsonify({'message': 'Frontend not built. Run: cd frontend && npm run build'}), 404
+    return jsonify({'message': 'Frontend not built'}), 404
+
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """静态文件 + SPA fallback（不拦截 /api/ 路由）"""
+    # 尝试直接匹配静态文件（JS/CSS/图片等）
+    file_path = os.path.join(STATIC_DIR, path)
+    if os.path.isfile(file_path):
+        return send_from_directory(STATIC_DIR, path)
+    # SPA fallback：非静态文件的路径返回 index.html
+    index_path = os.path.join(STATIC_DIR, 'index.html')
+    if os.path.isfile(index_path) and not path.startswith('api/'):
+        return send_file(index_path)
+    # API 路径返回 404 JSON
+    return jsonify({'message': 'Not Found'}), 404
 
 
 if __name__ == '__main__':
