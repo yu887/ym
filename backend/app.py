@@ -86,6 +86,38 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(check_reminders, 'interval', seconds=60, id='reminder_check')
 scheduler.start()
 
+# ── 健康检查 & 调试 ────────────────────────────────────────────
+@app.route('/ping')
+def ping():
+    """无需数据库的健康检查"""
+    import sys
+    return jsonify({
+        'status': 'ok',
+        'python': sys.version,
+        'db_type': os.environ.get('DB_TYPE', 'mysql'),
+    })
+
+@app.route('/api/health')
+def health():
+    """带数据库的健康检查"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) AS cnt FROM users')
+        user_count = cursor.fetchone()['cnt']
+        cursor.execute('SELECT COUNT(*) AS cnt FROM books')
+        book_count = cursor.fetchone()['cnt']
+        cursor.close()
+        conn.close()
+        return jsonify({
+            'status': 'ok',
+            'db_type': os.environ.get('DB_TYPE', 'mysql'),
+            'users': user_count,
+            'books': book_count,
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
