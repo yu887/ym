@@ -11,6 +11,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# 默认使用 SQLite（云平台部署无需 MySQL）
+ENV DB_TYPE=sqlite
+
 # 安装系统依赖
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
